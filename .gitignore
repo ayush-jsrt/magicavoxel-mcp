@@ -20,7 +20,7 @@ renders/
 *.png
 *.obj
 *.glb
-!vox/**/*.vox
+!tests/fixtures/*.vox
 
 # Editor / OS
 .vscode/

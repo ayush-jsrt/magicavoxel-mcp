@@ -31,7 +31,10 @@ def write_vox(buffer: VoxelBuffer, path: str) -> None:
     voxel_rows[:, 3] = colors
     xyzi_content = struct.pack("<i", len(xs)) + voxel_rows.tobytes()
 
-    rgba_content = buffer.palette.astype(np.uint8).tobytes()
+    # Voxel color index i (1-255) refers to RGBA chunk entry i-1, per the
+    # spec — shift our palette (where buffer.palette[i] is "the color for
+    # voxel value i") left by one so chunk[k] = buffer.palette[k+1].
+    rgba_content = np.roll(buffer.palette, -1, axis=0).astype(np.uint8).tobytes()
 
     children = (
         _chunk(b"SIZE", size_content)
@@ -92,7 +95,9 @@ def read_vox(path: str) -> VoxelBuffer:
     for x, y, z, c in voxels:
         buffer.set_voxel(x, y, z, c)
     if palette is not None:
-        for i, rgba in enumerate(palette):
-            buffer.set_palette_entry(i, *rgba)
+        # Inverse of the write-side shift: buffer.palette[i] = chunk[i-1].
+        shifted = np.roll(np.array(palette, dtype=np.uint8), 1, axis=0)
+        for i in range(256):
+            buffer.set_palette_entry(i, *shifted[i])
 
     return buffer

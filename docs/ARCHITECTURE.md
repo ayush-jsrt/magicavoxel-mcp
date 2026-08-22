@@ -92,16 +92,27 @@ MCP tool calls.
   `bpy.ops.wm.obj_import(up_axis='Z', forward_axis='Y')` — verified against
   the actually-installed Blender 4.2.3, which removed the older
   `import_scene.obj` operator — recalculates normals (so the OBJ writer's
-  winding order doesn't need to be outward-consistent), and renders each
-  requested orthographic view with `BLENDER_EEVEE_NEXT` (Eevee was renamed in
-  4.2; the older `BLENDER_EEVEE` id no longer exists).
+  winding order doesn't need to be outward-consistent), and renders with
+  `BLENDER_EEVEE_NEXT` (Eevee was renamed in 4.2; the older `BLENDER_EEVEE`
+  id no longer exists), with ambient occlusion and 64 samples enabled for
+  cleaner edges.
+- **View set**: initially only axis-aligned orthographic views
+  (front/back/left/right/top) existed. These flatten depth entirely and read
+  poorly as "what does this actually look like" — confirmed by a real build
+  (a ramen cart diorama) being genuinely hard to recognize in flat renders.
+  Added perspective vantage points instead: `hero_front_right`,
+  `hero_front_left`, `hero_back_right`, `hero_back_left`, `hero_top` (steep
+  aerial 3/4), `hero_low` (dramatic low angle) — `hero` is an alias for
+  `hero_front_right` and is the `render` tool's default single-view angle.
+  Orthographic views remain available for verifying exact geometry/alignment.
 - `blender_render.render_views` shells out to that script and resolves the
   Blender executable from an explicit argument, then
   `MAGICAVOXEL_MCP_BLENDER_EXE`, then `PATH` — never hardcoded.
-- `contact_sheet.compose_contact_sheet` tiles the per-view PNGs into one
-  labeled image via Pillow. The `render` tool returns this single combined
-  image rather than multiple content blocks, sidestepping the need to verify
-  whether this `mcp` version's tool-return conversion supports a list of
+- `contact_sheet.compose_contact_sheet` tiles multiple per-view PNGs into one
+  labeled image via Pillow, used only when more than one view is requested —
+  a single-view request returns that render directly. Returning a combined
+  image rather than multiple content blocks also sidesteps the need to
+  verify whether this `mcp` version's tool-return conversion supports a list of
   `Image` objects.
 - Verified end-to-end: unit tests on mesh face-culling, a real-Blender
   integration test asserting non-blank output, a real in-memory MCP session

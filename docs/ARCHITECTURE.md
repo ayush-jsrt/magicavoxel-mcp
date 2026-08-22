@@ -105,6 +105,14 @@ MCP tool calls.
   aerial 3/4), `hero_low` (dramatic low angle) — `hero` is an alias for
   `hero_front_right` and is the `render` tool's default single-view angle.
   Orthographic views remain available for verifying exact geometry/alignment.
+- **Lighting modes**: one flat neutral studio setup existed initially — fine
+  for judging shape/color, but conveys no mood (a midnight-themed scene
+  rendered under flat gray daylight-ish lighting). Added a `lighting`
+  parameter: `"neutral"` (default) or `"night"` (dark ambient sky, warm
+  low-angle key light approximating lantern/street-level warmth, cool blue
+  rim fill light for contrast). This is a global mood approximation only —
+  there's no real per-object emission tied to lanterns/neon/etc. in the
+  model (see `run_voxel_script`/materials TODOs below).
 - `blender_render.render_views` shells out to that script and resolves the
   Blender executable from an explicit argument, then
   `MAGICAVOXEL_MCP_BLENDER_EXE`, then `PATH` — never hardcoded.

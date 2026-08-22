@@ -38,6 +38,18 @@ MCP tool calls.
   `-extension.txt` for scene graph / material chunks), using stdlib `struct`.
   Rejected third-party libs (`pyvox`, `voxelfuse`) as unmaintained/niche —
   avoid depending on them for a format this simple.
+- **The RGBA chunk's index offset (voxel color `i` → chunk entry `i-1`) was
+  documented here from the start but not actually implemented until it
+  shipped a real bug**: custom palettes (via `apply_palette`) rendered wrong
+  colors in real MagicaVoxel, while our own round-trip tests still passed —
+  self-consistent write+read can't catch a shift both sides skip identically.
+  Caught by visually inspecting a real build in MagicaVoxel (a ramen cart
+  diorama built through the live MCP session), not by any automated test.
+  Fixed in `vox_io.py`, with a
+  new regression test that parses the raw RGBA chunk bytes independently of
+  our own reader. Lesson: for format-compliance facts like this, a test that
+  only exercises our own writer against our own reader is not sufficient —
+  needs either a byte-level spec check or the real external tool.
 - **Rendering via headless Blender, not MagicaVoxel itself.** MagicaVoxel has no
   CLI render mode, so it can't be part of an automated agent loop. Blender
   (`blender --background --python ...`) is the actual render backend.

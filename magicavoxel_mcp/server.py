@@ -174,25 +174,32 @@ def export_vox(ctx: Context, path: str) -> str:
 
 @server.tool()
 def render(ctx: Context, views: list[str] | None = None, image_size: int = 512) -> Image:
-    """Render the current canvas from multiple angles and return one
-    contact-sheet image combining them, so you can visually check the model.
+    """Render the current canvas and return an image so you can visually
+    check the model. By default, renders a single "hero" perspective 3/4
+    angle — the most useful one for judging how something actually looks.
 
-    views: subset of "hero" (perspective 3/4 angle — the most useful one for
-    actually judging how something looks), "front", "back", "left", "right",
-    "top" (orthographic axis views — useful for verifying exact geometry, but
-    flatten depth). Defaults to ["hero", "front", "top"] if not given.
+    Pass `views` to see something else instead: a subset of "hero", "front",
+    "back", "left", "right", "top" (the latter five are orthographic axis
+    views — useful for verifying exact geometry, but they flatten depth).
+    Passing more than one view returns a single labeled contact-sheet image
+    tiling all of them together, rather than one image per view.
     """
     buffer = _session(ctx).require_buffer()
     if views is None:
-        views = ["hero", "front", "top"]
+        views = ["hero"]
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         obj_path = f"{tmp_dir}/model.obj"
         write_cube_mesh(buffer, obj_path)
         view_paths = render_views(obj_path, tmp_dir, views, image_size=image_size)
-        sheet_path = f"{tmp_dir}/contact_sheet.png"
-        compose_contact_sheet(view_paths, sheet_path)
-        with open(sheet_path, "rb") as f:
+
+        if len(view_paths) == 1:
+            (output_path,) = view_paths.values()
+        else:
+            output_path = f"{tmp_dir}/contact_sheet.png"
+            compose_contact_sheet(view_paths, output_path)
+
+        with open(output_path, "rb") as f:
             sheet_bytes = f.read()
     return Image(data=sheet_bytes, format="png")
 

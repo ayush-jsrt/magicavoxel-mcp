@@ -148,7 +148,29 @@ except RuntimeError:
 
 @pytest.mark.anyio
 @pytest.mark.skipif(not BLENDER_AVAILABLE, reason="Blender not found on this machine")
-async def test_render_tool_over_real_session():
+async def test_render_tool_defaults_to_single_hero_view_over_real_session():
+    async with live_session() as session:
+        await session.call_tool("create_canvas", {"width": 6, "height": 6, "depth": 6})
+        await session.call_tool(
+            "add_shape",
+            {"shape": "box", "color_index": 5, "center_x": 3, "center_y": 3, "center_z": 3, "size_x": 2, "size_y": 2, "size_z": 2},
+        )
+
+        result = await session.call_tool("render", {"image_size": 128})
+        assert not result.is_error
+        assert len(result.content) == 1
+        image_block = result.content[0]
+        assert image_block.type == "image"
+        assert len(image_block.data) > 0
+
+        result = await session.call_tool("inspect_model", {})
+        assert not result.is_error
+        assert "6x6x6" in result.content[0].text
+
+
+@pytest.mark.anyio
+@pytest.mark.skipif(not BLENDER_AVAILABLE, reason="Blender not found on this machine")
+async def test_render_tool_accepts_explicit_multi_view_over_real_session():
     async with live_session() as session:
         await session.call_tool("create_canvas", {"width": 6, "height": 6, "depth": 6})
         await session.call_tool(
@@ -162,7 +184,3 @@ async def test_render_tool_over_real_session():
         image_block = result.content[0]
         assert image_block.type == "image"
         assert len(image_block.data) > 0
-
-        result = await session.call_tool("inspect_model", {})
-        assert not result.is_error
-        assert "6x6x6" in result.content[0].text

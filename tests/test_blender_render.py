@@ -49,3 +49,27 @@ def test_render_views_rejects_unknown_view(tmp_path):
 
     with pytest.raises(ValueError):
         render_views(obj_path, os.fspath(tmp_path / "out"), ["sideways"])
+
+
+def test_render_views_night_lighting_produces_non_blank_pngs(tmp_path):
+    buf = VoxelBuffer(6, 6, 6)
+    fill_box(buf, (1, 1, 1), (3, 3, 3), 5)
+    obj_path = os.fspath(tmp_path / "model.obj")
+    write_cube_mesh(buf, obj_path)
+
+    output_dir = os.fspath(tmp_path / "renders")
+    result = render_views(obj_path, output_dir, ["hero"], image_size=128, lighting="night")
+
+    path = result["hero"]
+    assert os.path.exists(path)
+    assert not _is_blank(path), f"{path} looks blank"
+
+
+def test_render_views_rejects_unknown_lighting(tmp_path):
+    buf = VoxelBuffer(3, 3, 3)
+    buf.set_voxel(1, 1, 1, 1)
+    obj_path = os.fspath(tmp_path / "model.obj")
+    write_cube_mesh(buf, obj_path)
+
+    with pytest.raises(ValueError):
+        render_views(obj_path, os.fspath(tmp_path / "out"), ["hero"], lighting="sunset")

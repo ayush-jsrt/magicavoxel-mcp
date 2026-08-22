@@ -16,6 +16,9 @@ VALID_VIEWS = (
     "hero_back_right", "hero_back_left", "hero_top", "hero_low",
 )
 
+# Keep in sync with LIGHTING_PRESETS in blender_scripts/render_views.py.
+VALID_LIGHTING = ("neutral", "night")
+
 
 def resolve_blender_exe(blender_exe: str | None = None) -> str:
     if blender_exe:
@@ -37,12 +40,15 @@ def render_views(
     output_dir: str,
     views: list[str],
     image_size: int = 512,
+    lighting: str = "neutral",
     blender_exe: str | None = None,
     timeout: float = 90,
 ) -> dict[str, str]:
     for view in views:
         if view not in VALID_VIEWS:
             raise ValueError(f"Unknown view {view!r}: expected one of {VALID_VIEWS}")
+    if lighting not in VALID_LIGHTING:
+        raise ValueError(f"Unknown lighting {lighting!r}: expected one of {VALID_LIGHTING}")
 
     exe = resolve_blender_exe(blender_exe)
     os.makedirs(output_dir, exist_ok=True)
@@ -58,6 +64,7 @@ def render_views(
         output_dir,
         ",".join(views),
         str(image_size),
+        lighting,
     ]
     result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:

@@ -1,7 +1,7 @@
 """Runs inside Blender's own Python (invoked via `blender --background
 --python render_views.py -- <mesh_obj_path> <output_dir> <views_csv>
-<image_size>`). Imports a cube mesh, frames a camera per requested view, and
-renders each to <output_dir>/<view>.png.
+<image_size> <lighting>`). Imports a cube mesh, frames a camera per requested
+view, and renders each to <output_dir>/<view>.png.
 
 Axis-aligned views (front/back/left/right/top) are orthographic — useful for
 verifying exact geometry, but they flatten depth entirely and read poorly as
@@ -15,9 +15,32 @@ import bpy
 import mathutils
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-mesh_obj_path, output_dir, views_csv, image_size = argv
+mesh_obj_path, output_dir, views_csv, image_size, lighting = argv
 views = views_csv.split(",")
 image_size = int(image_size)
+
+LIGHTING_PRESETS = {
+    # Flat, neutral studio lighting — predictable, good for verifying shape
+    # and color rather than mood.
+    "neutral": {
+        "world_color": (0.85, 0.85, 0.85),
+        "key_energy": 3.0, "key_color": (1.0, 1.0, 1.0), "key_rotation": (0.6, 0.2, 0.4),
+        "fill_energy": 1.0, "fill_color": (1.0, 1.0, 1.0), "fill_rotation": (-0.5, -0.3, 2.6),
+    },
+    # Dark ambient + warm low key light (simulating lantern/street-level
+    # warmth) + cool blue rim fill from behind for contrast — for moody
+    # night scenes. We have no true per-object emission/point lights yet
+    # (see docs/ARCHITECTURE.md), so this is a global mood approximation,
+    # not actual light sources tied to lanterns/neon in the model.
+    "night": {
+        "world_color": (0.015, 0.015, 0.035),
+        "key_energy": 1.6, "key_color": (1.0, 0.55, 0.25), "key_rotation": (1.3, 0.1, 0.5),
+        "fill_energy": 0.7, "fill_color": (0.4, 0.55, 1.0), "fill_rotation": (-0.6, -0.2, 2.9),
+    },
+}
+if lighting not in LIGHTING_PRESETS:
+    raise ValueError(f"Unknown lighting {lighting!r}: expected one of {sorted(LIGHTING_PRESETS)}")
+preset = LIGHTING_PRESETS[lighting]
 
 VIEW_DIRECTIONS = {
     # Orthographic axis views — flatten depth, useful only for verifying
@@ -86,18 +109,20 @@ scene.eevee.gtao_distance = max(extent * 0.15, 0.5)
 if scene.world is None:
     scene.world = bpy.data.worlds.new("World")
 scene.world.use_nodes = False
-scene.world.color = (0.85, 0.85, 0.85)
+scene.world.color = preset["world_color"]
 
 sun_data = bpy.data.lights.new(name="Sun", type="SUN")
-sun_data.energy = 3.0
+sun_data.energy = preset["key_energy"]
+sun_data.color = preset["key_color"]
 sun_obj = bpy.data.objects.new("Sun", sun_data)
-sun_obj.rotation_euler = (0.6, 0.2, 0.4)
+sun_obj.rotation_euler = preset["key_rotation"]
 bpy.context.collection.objects.link(sun_obj)
 
 fill_data = bpy.data.lights.new(name="Fill", type="SUN")
-fill_data.energy = 1.0
+fill_data.energy = preset["fill_energy"]
+fill_data.color = preset["fill_color"]
 fill_obj = bpy.data.objects.new("Fill", fill_data)
-fill_obj.rotation_euler = (-0.5, -0.3, 2.6)
+fill_obj.rotation_euler = preset["fill_rotation"]
 bpy.context.collection.objects.link(fill_obj)
 
 camera_data = bpy.data.cameras.new("Camera")

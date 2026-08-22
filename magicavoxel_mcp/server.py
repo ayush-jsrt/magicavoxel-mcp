@@ -173,7 +173,7 @@ def export_vox(ctx: Context, path: str) -> str:
 
 
 @server.tool()
-def render(ctx: Context, views: list[str] | None = None, image_size: int = 512) -> Image:
+def render(ctx: Context, views: list[str] | None = None, image_size: int = 512, lighting: str = "neutral") -> Image:
     """Render the current canvas and return an image so you can visually
     check the model. By default, renders a single "hero" perspective 3/4
     angle — the most useful one for judging how something actually looks.
@@ -187,6 +187,11 @@ def render(ctx: Context, views: list[str] | None = None, image_size: int = 512) 
     "back", "left", "right", "top". Passing more than one view returns a
     single labeled contact-sheet image tiling all of them together, rather
     than one image per view.
+
+    lighting: "neutral" (default, flat studio lighting — best for judging
+    shape/color) or "night" (dark ambient, warm low key light, cool blue rim
+    fill — for moody night scenes). This is a global mood approximation, not
+    real light sources tied to lanterns/neon/etc. in the model.
     """
     buffer = _session(ctx).require_buffer()
     if views is None:
@@ -195,7 +200,7 @@ def render(ctx: Context, views: list[str] | None = None, image_size: int = 512) 
     with tempfile.TemporaryDirectory() as tmp_dir:
         obj_path = f"{tmp_dir}/model.obj"
         write_cube_mesh(buffer, obj_path)
-        view_paths = render_views(obj_path, tmp_dir, views, image_size=image_size)
+        view_paths = render_views(obj_path, tmp_dir, views, image_size=image_size, lighting=lighting)
 
         if len(view_paths) == 1:
             (output_path,) = view_paths.values()

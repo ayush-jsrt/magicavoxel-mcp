@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "magicavoxel": {
+      "command": "C:\\path\\to\\your\\venv-or-conda-env\\python.exe",
+      "args": ["-m", "magicavoxel_mcp.server"],
+      "env": {
+        "MAGICAVOXEL_MCP_BLENDER_EXE": "C:\\path\\to\\Blender\\blender.exe"
+      }
+    }
+  }
+}

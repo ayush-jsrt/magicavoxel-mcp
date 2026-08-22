@@ -99,27 +99,31 @@ use; see the next section.
 
 This server communicates over stdio, so any MCP-compatible host (Claude
 Code, Claude Desktop, Cursor, etc.) can run and talk to it directly — you
-don't run it manually yourself. Add it to your client's MCP server config,
-pointing `command` at the Python interpreter from the environment you
-installed into:
+don't run it manually yourself. Copy [`.mcp.json.example`](.mcp.json.example)
+to `.mcp.json` and fill in the two paths for your machine:
 
 ```json
 {
   "mcpServers": {
     "magicavoxel": {
-      "command": "C:\\path\\to\\your\\.venv\\Scripts\\python.exe",
+      "command": "C:\\path\\to\\your\\venv-or-conda-env\\python.exe",
       "args": ["-m", "magicavoxel_mcp.server"],
       "env": {
-        "MAGICAVOXEL_MCP_BLENDER_EXE": "C:\\Program Files\\Blender Foundation\\Blender 4.2\\blender.exe"
+        "MAGICAVOXEL_MCP_BLENDER_EXE": "C:\\path\\to\\Blender\\blender.exe"
       }
     }
   }
 }
 ```
 
-For Claude Code specifically, this can go in a project-level `.mcp.json`, or
-be registered with `claude mcp add`. Consult your client's documentation for
-the exact config file location and format.
+`command` should be the Python interpreter from the environment you
+installed into. `.mcp.json` itself is gitignored (paths are machine-specific)
+— only the `.example` file is committed.
+
+For Claude Code specifically, a project-level `.mcp.json` is picked up
+automatically (you may need to run `/mcp reconnect` or restart the session);
+it can also be registered with `claude mcp add`. Consult your client's
+documentation for the exact config file location and format.
 
 ## Available tools
 

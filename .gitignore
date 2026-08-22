@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+
+# Output artifacts (generated voxel models & renders)
+out/
+renders/
+*.vox
+*.png
+*.obj
+*.glb
+!vox/**/*.vox
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/settings.local.json

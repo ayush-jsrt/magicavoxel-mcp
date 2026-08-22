@@ -8,8 +8,13 @@ import subprocess
 
 _SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "blender_scripts", "render_views.py")
 
-# "hero" is a perspective 3/4 angle; the rest are orthographic axis views.
-VALID_VIEWS = ("front", "back", "left", "right", "top", "hero")
+# The "hero*" views are perspective vantage points; the rest are orthographic
+# axis views. Keep in sync with VIEW_DIRECTIONS in blender_scripts/render_views.py.
+VALID_VIEWS = (
+    "front", "back", "left", "right", "top",
+    "hero", "hero_front_right", "hero_front_left",
+    "hero_back_right", "hero_back_left", "hero_top", "hero_low",
+)
 
 
 def resolve_blender_exe(blender_exe: str | None = None) -> str:

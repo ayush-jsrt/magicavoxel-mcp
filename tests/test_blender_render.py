@@ -30,10 +30,11 @@ def test_render_views_produces_non_blank_pngs(tmp_path):
     obj_path = os.fspath(tmp_path / "model.obj")
     write_cube_mesh(buf, obj_path)
 
+    requested = ["front", "top", "hero", "hero_back_left", "hero_top", "hero_low"]
     output_dir = os.fspath(tmp_path / "renders")
-    result = render_views(obj_path, output_dir, ["front", "top", "hero"], image_size=128)
+    result = render_views(obj_path, output_dir, requested, image_size=128)
 
-    assert set(result.keys()) == {"front", "top", "hero"}
+    assert set(result.keys()) == set(requested)
     for path in result.values():
         assert os.path.exists(path)
         assert os.path.getsize(path) > 0

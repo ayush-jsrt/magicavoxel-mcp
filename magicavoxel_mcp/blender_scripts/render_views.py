@@ -20,14 +20,29 @@ views = views_csv.split(",")
 image_size = int(image_size)
 
 VIEW_DIRECTIONS = {
+    # Orthographic axis views — flatten depth, useful only for verifying
+    # exact geometry (alignment, proportions), not for judging how something
+    # actually looks.
     "front": mathutils.Vector((0, -1, 0)),
     "back": mathutils.Vector((0, 1, 0)),
     "left": mathutils.Vector((-1, 0, 0)),
     "right": mathutils.Vector((1, 0, 0)),
     "top": mathutils.Vector((0, 0, 1)),
-    "hero": mathutils.Vector((1, -1, 0.75)).normalized(),
+    # Perspective vantage points — real depth and shape, like actually
+    # looking at the thing from somewhere. "hero" is an alias for the
+    # front-right corner, kept as the default single-view angle.
+    "hero_front_right": mathutils.Vector((1, -1, 0.75)).normalized(),
+    "hero_front_left": mathutils.Vector((-1, -1, 0.75)).normalized(),
+    "hero_back_right": mathutils.Vector((1, 1, 0.75)).normalized(),
+    "hero_back_left": mathutils.Vector((-1, 1, 0.75)).normalized(),
+    "hero_top": mathutils.Vector((0.3, -0.3, 1.6)).normalized(),
+    "hero_low": mathutils.Vector((1, -1, 0.15)).normalized(),
 }
-PERSPECTIVE_VIEWS = {"hero"}
+VIEW_DIRECTIONS["hero"] = VIEW_DIRECTIONS["hero_front_right"]
+PERSPECTIVE_VIEWS = {
+    "hero", "hero_front_right", "hero_front_left",
+    "hero_back_right", "hero_back_left", "hero_top", "hero_low",
+}
 
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)

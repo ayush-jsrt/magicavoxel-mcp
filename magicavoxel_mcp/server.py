@@ -178,11 +178,15 @@ def render(ctx: Context, views: list[str] | None = None, image_size: int = 512) 
     check the model. By default, renders a single "hero" perspective 3/4
     angle — the most useful one for judging how something actually looks.
 
-    Pass `views` to see something else instead: a subset of "hero", "front",
-    "back", "left", "right", "top" (the latter five are orthographic axis
-    views — useful for verifying exact geometry, but they flatten depth).
-    Passing more than one view returns a single labeled contact-sheet image
-    tiling all of them together, rather than one image per view.
+    Pass `views` to see something else instead — perspective vantage points
+    (real depth, like actually looking at it): "hero" (alias for
+    hero_front_right), "hero_front_right", "hero_front_left",
+    "hero_back_right", "hero_back_left", "hero_top" (steep aerial 3/4),
+    "hero_low" (low dramatic angle); or orthographic axis views (flatten
+    depth, useful only for verifying exact geometry/alignment): "front",
+    "back", "left", "right", "top". Passing more than one view returns a
+    single labeled contact-sheet image tiling all of them together, rather
+    than one image per view.
     """
     buffer = _session(ctx).require_buffer()
     if views is None:

@@ -1,6 +1,6 @@
-"""Shells out to headless Blender to render orthographic views of a cube
-mesh. Blender's own path isn't hardcoded — install locations vary per
-machine (see docs/ARCHITECTURE.md)."""
+"""Shells out to headless Blender to render views of a cube mesh. Blender's
+own path isn't hardcoded — install locations vary per machine (see
+docs/ARCHITECTURE.md)."""
 
 import os
 import shutil
@@ -8,7 +8,8 @@ import subprocess
 
 _SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "blender_scripts", "render_views.py")
 
-VALID_VIEWS = ("front", "back", "left", "right", "top")
+# "hero" is a perspective 3/4 angle; the rest are orthographic axis views.
+VALID_VIEWS = ("front", "back", "left", "right", "top", "hero")
 
 
 def resolve_blender_exe(blender_exe: str | None = None) -> str:

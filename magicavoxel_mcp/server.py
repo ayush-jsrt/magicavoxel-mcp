@@ -177,12 +177,14 @@ def render(ctx: Context, views: list[str] | None = None, image_size: int = 512) 
     """Render the current canvas from multiple angles and return one
     contact-sheet image combining them, so you can visually check the model.
 
-    views: subset of "front", "back", "left", "right", "top". Defaults to
-    ["front", "right", "top"] if not given.
+    views: subset of "hero" (perspective 3/4 angle — the most useful one for
+    actually judging how something looks), "front", "back", "left", "right",
+    "top" (orthographic axis views — useful for verifying exact geometry, but
+    flatten depth). Defaults to ["hero", "front", "top"] if not given.
     """
     buffer = _session(ctx).require_buffer()
     if views is None:
-        views = ["front", "right", "top"]
+        views = ["hero", "front", "top"]
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         obj_path = f"{tmp_dir}/model.obj"

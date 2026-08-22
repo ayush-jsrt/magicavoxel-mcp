@@ -58,13 +58,53 @@ MCP tool calls.
 
 ## Render/capture loop (the agentic feedback cycle)
 
-1. Agent calls `create_canvas` / `add_shape` / `set_voxel` repeatedly to build a model.
-2. `export_vox` serializes the buffer to a `.vox` file.
-3. `render` writes a companion mesh, shells out to headless Blender, waits, and
-   returns the resulting PNG as an MCP image content block — so a vision-capable
-   host sees the render directly in context.
-4. Agent critiques the image and issues more shape/voxel edits; repeat.
-5. Optionally, `open_in_magicavoxel` launches the real app for manual finishing.
+1. Agent calls `create_canvas`/`import_vox` / `add_shape` / `set_voxel` /
+   `recolor_region` / `erase_region` repeatedly to build or edit a model.
+2. `render` (implemented — see below) writes a companion mesh, shells out to
+   headless Blender, and returns a single contact-sheet image (multiple
+   angles tiled into one PNG) as an MCP image content block, so a
+   vision-capable host sees the render directly in context.
+3. Agent critiques the image and issues more edits; `save_checkpoint`/
+   `restore_checkpoint` give it a safe way to back out of a bad attempt.
+4. `export_vox` serializes the buffer to a `.vox` file when done.
+5. Optionally, `open_in_magicavoxel` (not yet built) would launch the real app
+   for manual finishing.
+
+### Render pipeline internals (Milestone 2)
+
+- `mesh_export.write_cube_mesh` converts the voxel grid to an OBJ+MTL mesh,
+  emitting only exterior faces (6 numpy-shifted neighbor comparisons, not a
+  per-voxel loop) grouped into one material per color actually used.
+- `blender_scripts/render_views.py` runs inside Blender's own Python
+  (`--background --python ... --`), imports the mesh via
+  `bpy.ops.wm.obj_import(up_axis='Z', forward_axis='Y')` — verified against
+  the actually-installed Blender 4.2.3, which removed the older
+  `import_scene.obj` operator — recalculates normals (so the OBJ writer's
+  winding order doesn't need to be outward-consistent), and renders each
+  requested orthographic view with `BLENDER_EEVEE_NEXT` (Eevee was renamed in
+  4.2; the older `BLENDER_EEVEE` id no longer exists).
+- `blender_render.render_views` shells out to that script and resolves the
+  Blender executable from an explicit argument, then
+  `MAGICAVOXEL_MCP_BLENDER_EXE`, then `PATH` — never hardcoded.
+- `contact_sheet.compose_contact_sheet` tiles the per-view PNGs into one
+  labeled image via Pillow. The `render` tool returns this single combined
+  image rather than multiple content blocks, sidestepping the need to verify
+  whether this `mcp` version's tool-return conversion supports a list of
+  `Image` objects.
+- Verified end-to-end: unit tests on mesh face-culling, a real-Blender
+  integration test asserting non-blank output, a real in-memory MCP session
+  test exercising the `render` tool's `Image` conversion, and a manual visual
+  check with an asymmetric test model confirming no axis flip/rotation bugs.
+
+### Region handles (Milestone 2)
+
+`add_shape` returns a `region_id` (from `session.Session`, which also holds
+checkpoints) that `recolor_region`/`erase_region` can act on later, so a part
+built earlier can be targeted without re-deriving its coordinates. Regions are
+paint-time snapshots of which voxels a shape call touched — if a later shape
+overlaps and repaints those cells, recoloring/erasing the earlier region still
+affects them (no z-order/last-writer tracking; would need a real scene graph
+to fix properly).
 
 ## Environment
 
@@ -83,8 +123,14 @@ MCP tool calls.
 
 ## Open TODOs
 
-- [ ] Locate or install MagicaVoxel.exe on this machine.
-- [ ] Scaffold core library: `VoxelBuffer`, geometry primitives, `.vox` writer/reader.
-- [ ] Scaffold MCP server (`FastMCP`) wrapping the core library.
-- [ ] Blender headless render script (mesh-from-cubes importer, camera/light setup).
+- [x] Locate or install MagicaVoxel.exe on this machine (installed at
+      `C:\Users\ayush\Desktop\MagicaVoxel\MagicaVoxel-0.99.7.2-win64\MagicaVoxel.exe`).
+- [x] Scaffold core library: `VoxelBuffer`, geometry primitives, `.vox` writer/reader.
+- [x] Scaffold MCP server (`MCPServer` from `mcp.server` — not `FastMCP`,
+      which doesn't exist in the installed `mcp==2.0.0`) wrapping the core library.
+- [x] Blender headless render script (mesh-from-cubes importer, camera/light setup).
+- [x] Region handles + checkpoint/restore (`session.py`).
+- [x] `import_vox` tool.
 - [ ] Sandbox design for `run_voxel_script`.
+- [ ] `open_in_magicavoxel` convenience tool.
+- [ ] Mirror/rotate/array ops, true CSG boolean subtract, MagicaVoxel scene-graph chunks (`nTRN`/`nGRP`/`nSHP`) — all explicitly deferred past Milestone 2.

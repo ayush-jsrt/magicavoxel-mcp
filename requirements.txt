@@ -1,4 +1,3 @@
-mcp>=1.0.0
-numpy>=1.26
-opensimplex>=0.4
-Pillow>=10.0
+mcp>=2.0.0,<3.0.0
+numpy>=1.26,<3.0
+Pillow>=10.0,<13.0

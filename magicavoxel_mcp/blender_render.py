@@ -75,6 +75,10 @@ def render_views(
     for view in views:
         path = os.path.join(output_dir, f"{view}.png")
         if not os.path.exists(path):
-            raise RuntimeError(f"Blender did not produce expected output {path}")
+            tail = "\n".join((result.stdout + result.stderr).strip().splitlines()[-30:])
+            raise RuntimeError(
+                f"Blender exited 0 but did not produce expected output {path}. "
+                f"Blender output:\n{tail}"
+            )
         output_paths[view] = path
     return output_paths

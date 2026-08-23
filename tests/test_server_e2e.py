@@ -64,7 +64,7 @@ async def test_full_tool_sequence_over_real_session(tmp_path):
         names = {t.name for t in tools.tools}
         assert names == ALL_TOOL_NAMES
 
-        result = await session.call_tool("create_canvas", {"width": 16, "height": 16, "depth": 16})
+        result = await session.call_tool("create_canvas", {"width": 16, "depth": 16, "height": 16})
         assert not result.is_error
 
         result = await session.call_tool(
@@ -95,7 +95,7 @@ async def test_full_tool_sequence_over_real_session(tmp_path):
 @pytest.mark.anyio
 async def test_region_and_checkpoint_tools_over_real_session():
     async with live_session() as session:
-        await session.call_tool("create_canvas", {"width": 10, "height": 10, "depth": 10})
+        await session.call_tool("create_canvas", {"width": 10, "depth": 10, "height": 10})
 
         result = await session.call_tool(
             "add_shape",
@@ -150,7 +150,7 @@ except RuntimeError:
 @pytest.mark.skipif(not BLENDER_AVAILABLE, reason="Blender not found on this machine")
 async def test_render_tool_defaults_to_single_hero_view_over_real_session():
     async with live_session() as session:
-        await session.call_tool("create_canvas", {"width": 6, "height": 6, "depth": 6})
+        await session.call_tool("create_canvas", {"width": 6, "depth": 6, "height": 6})
         await session.call_tool(
             "add_shape",
             {"shape": "box", "color_index": 5, "center_x": 3, "center_y": 3, "center_z": 3, "size_x": 2, "size_y": 2, "size_z": 2},
@@ -172,7 +172,7 @@ async def test_render_tool_defaults_to_single_hero_view_over_real_session():
 @pytest.mark.skipif(not BLENDER_AVAILABLE, reason="Blender not found on this machine")
 async def test_render_tool_accepts_explicit_multi_view_over_real_session():
     async with live_session() as session:
-        await session.call_tool("create_canvas", {"width": 6, "height": 6, "depth": 6})
+        await session.call_tool("create_canvas", {"width": 6, "depth": 6, "height": 6})
         await session.call_tool(
             "add_shape",
             {"shape": "box", "color_index": 5, "center_x": 3, "center_y": 3, "center_z": 3, "size_x": 2, "size_y": 2, "size_z": 2},

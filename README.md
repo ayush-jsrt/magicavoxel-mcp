@@ -127,9 +127,13 @@ documentation for the exact config file location and format.
 
 ## Available tools
 
+Coordinate convention (applies to every tool that takes x/y/z): **x = width**
+(left/right), **y = depth** (into the screen), **z = height** (up). Build
+tall things by growing z, not y.
+
 | Tool | Description |
 |---|---|
-| `create_canvas(width, height, depth)` | Start a new empty canvas (each dimension 1-256). |
+| `create_canvas(width, depth, height)` | Start a new empty canvas (each dimension 1-256). |
 | `import_vox(path)` | Load an existing `.vox` file as the active canvas. |
 | `set_voxel(x, y, z, color_index)` | Set a single voxel (color_index 1-255; 0 is empty). |
 | `add_shape(shape, color_index, ...)` | Paint a `"box"`, `"sphere"`, or `"cylinder"`. Returns a `region_id`. |
@@ -146,6 +150,21 @@ Regions are paint-time snapshots — if a later shape overlaps and repaints
 voxels from an earlier one, recoloring/erasing the earlier region still
 affects them. See `docs/ARCHITECTURE.md` for details and other known
 limitations.
+
+## Known limitations
+
+- **Shapes that extend past the canvas edges are clipped**, not rejected —
+  `add_shape`'s returned message reports how many voxels were clipped when
+  this happens, so watch for that rather than assuming the full requested
+  shape was painted.
+- **`render`'s camera has no occlusion awareness.** It auto-fits the whole
+  scene's bounding box with no visibility check, so a shape between the
+  camera and the rest of the model (e.g. a wall on the camera-facing side)
+  blocks the view with no warning.
+- **`render`'s auto-fit framing has no proportionality guardrail.** Mixing a
+  large element (e.g. a room-scale floor) with a small one in the same
+  canvas will shrink the small element to a sliver, since the camera always
+  frames the full extent of everything in the canvas.
 
 ## Not yet implemented
 

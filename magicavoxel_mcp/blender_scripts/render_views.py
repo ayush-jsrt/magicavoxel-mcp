@@ -21,11 +21,13 @@ image_size = int(image_size)
 
 LIGHTING_PRESETS = {
     # Flat, neutral studio lighting — predictable, good for verifying shape
-    # and color rather than mood.
+    # and color rather than mood. Energies are kept low enough that a light
+    # pastel material doesn't overexpose toward white (verified against a
+    # (220, 190, 230) test material rendering close to its literal RGB).
     "neutral": {
-        "world_color": (0.85, 0.85, 0.85),
-        "key_energy": 3.0, "key_color": (1.0, 1.0, 1.0), "key_rotation": (0.6, 0.2, 0.4),
-        "fill_energy": 1.0, "fill_color": (1.0, 1.0, 1.0), "fill_rotation": (-0.5, -0.3, 2.6),
+        "world_color": (0.5, 0.5, 0.5),
+        "key_energy": 1.0, "key_color": (1.0, 1.0, 1.0), "key_rotation": (0.6, 0.2, 0.4),
+        "fill_energy": 0.4, "fill_color": (1.0, 1.0, 1.0), "fill_rotation": (-0.5, -0.3, 2.6),
     },
     # Dark ambient + warm low key light (simulating lantern/street-level
     # warmth) + cool blue rim fill from behind for contrast — for moody
@@ -110,6 +112,11 @@ if scene.world is None:
     scene.world = bpy.data.worlds.new("World")
 scene.world.use_nodes = False
 scene.world.color = preset["world_color"]
+# Blender 4.x defaults to the AgX view transform, which tone-maps/desaturates
+# bright and pastel colors — fighting the "best for judging shape/color"
+# goal of these presets. Use Standard so rendered colors track the literal
+# palette RGB.
+scene.view_settings.view_transform = "Standard"
 
 sun_data = bpy.data.lights.new(name="Sun", type="SUN")
 sun_data.energy = preset["key_energy"]

@@ -34,11 +34,17 @@ def _session(ctx: Context) -> Session:
 
 
 @server.tool()
-def create_canvas(ctx: Context, width: int, height: int, depth: int) -> str:
+def create_canvas(ctx: Context, width: int, depth: int, height: int) -> str:
     """Create a new empty voxel canvas, replacing any existing one. Dimensions
-    must each be between 1 and 256 (MagicaVoxel's per-model limit)."""
-    _session(ctx).new_canvas(width, height, depth)
-    return f"Created a {width}x{height}x{depth} canvas."
+    must each be between 1 and 256 (MagicaVoxel's per-model limit).
+
+    Coordinate convention (applies to this and every other tool that takes
+    x/y/z): x = width (left/right), y = depth (into the screen), z = height
+    (up). z is the vertical axis in renders — build tall things by growing z,
+    not y.
+    """
+    _session(ctx).new_canvas(width, depth, height)
+    return f"Created a {width}x{depth}x{height} (width x depth x height) canvas."
 
 
 @server.tool()
@@ -75,10 +81,24 @@ def add_shape(
 ) -> str:
     """Add a geometric primitive to the canvas.
 
+    Coordinate convention: x = width (left/right), y = depth (into the
+    screen), z = height (up) — use z for "tall", not y.
+
     shape: "box", "sphere", or "cylinder".
-    For "box": uses center_x/y/z and size_x/y/z to build a box centered there.
-    For "sphere": uses center_x/y/z and radius.
-    For "cylinder": uses center_x/y/z, radius, height, and axis ("x"/"y"/"z").
+    For "box": uses center_x/y/z and size_x/y/z to build a box centered
+    there. Centering is `min_corner = center - size // 2` (floor division —
+    for even sizes this puts one more voxel below/behind center than
+    above/in front) and `max_corner = min_corner + size - 1` (inclusive).
+    For "sphere": uses center_x/y/z and radius. A voxel exactly `radius`
+    away from center is included (inclusive boundary).
+    For "cylinder": uses center_x/y/z, radius, height, and axis ("x"/"y"/"z"
+    — the axis the cylinder stands along; "z" is upright). Boundary on both
+    radius and height is inclusive.
+
+    If the shape extends past the canvas edges, it's silently clipped — the
+    returned message reports the clipped count when this happens; cross-check
+    against list_regions/inspect_model if a voxel count looks lower than
+    expected.
 
     Returns a region_id that can be passed to recolor_region/erase_region
     later to edit just this shape.
@@ -90,16 +110,20 @@ def add_shape(
     if shape == "box":
         min_corner = (center_x - size_x // 2, center_y - size_y // 2, center_z - size_z // 2)
         max_corner = (min_corner[0] + size_x - 1, min_corner[1] + size_y - 1, min_corner[2] + size_z - 1)
-        count, coords = fill_box(buffer, min_corner, max_corner, color_index)
+        count, coords, requested_count = fill_box(buffer, min_corner, max_corner, color_index)
     elif shape == "sphere":
-        count, coords = fill_sphere(buffer, center, radius, color_index)
+        count, coords, requested_count = fill_sphere(buffer, center, radius, color_index)
     elif shape == "cylinder":
-        count, coords = fill_cylinder(buffer, center, radius, height, axis, color_index)
+        count, coords, requested_count = fill_cylinder(buffer, center, radius, height, axis, color_index)
     else:
         raise ValueError(f"Unknown shape {shape!r}: expected 'box', 'sphere', or 'cylinder'")
 
     region_id = session.add_region(shape, color_index, coords)
-    return f"Painted {count} voxels for {shape} (region_id={region_id})."
+    message = f"Painted {count} voxels for {shape} (region_id={region_id})."
+    if count < requested_count:
+        clipped = requested_count - count
+        message += f" {clipped} of {requested_count} requested voxels fell outside the canvas bounds and were not painted."
+    return message
 
 
 @server.tool()
@@ -192,6 +216,17 @@ def render(ctx: Context, views: list[str] | None = None, image_size: int = 512, 
     shape/color) or "night" (dark ambient, warm low key light, cool blue rim
     fill — for moody night scenes). This is a global mood approximation, not
     real light sources tied to lanterns/neon/etc. in the model.
+
+    The camera always auto-fits the entire scene's bounding box — there is
+    no occlusion check, so any shape sitting between the camera and the rest
+    of the model (e.g. a wall placed on the camera-facing side rather than
+    the back) will block the view with no warning; if a render looks
+    unexpectedly blank, check for enclosing geometry on the near side and
+    try a different hero angle. The same auto-fit also scales to the full
+    extent of whatever is in the canvas, so a large element (e.g. a
+    room-scale floor) combined with a small one will shrink the small
+    element to a sliver — check inspect_model's bounding box first if the
+    canvas mixes very different scales.
     """
     buffer = _session(ctx).require_buffer()
     if views is None:

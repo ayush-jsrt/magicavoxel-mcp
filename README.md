@@ -137,6 +137,7 @@ tall things by growing z, not y.
 | `import_vox(path)` | Load an existing `.vox` file as the active canvas. |
 | `set_voxel(x, y, z, color_index)` | Set a single voxel (color_index 1-255; 0 is empty). |
 | `add_shape(shape, color_index, ...)` | Paint a `"box"`, `"sphere"`, or `"cylinder"`. Returns a `region_id`. |
+| `carve_shape(shape, ...)` | Carve/subtract a `"box"`, `"sphere"`, or `"cylinder"` out of existing voxels (sets to empty `0`). |
 | `stamp_vox(path, offset_x, offset_y, offset_z, rotation)` | Stamp an external `.vox` asset into the active canvas with optional rotation ($0^\circ/90^\circ/180^\circ/270^\circ$). Returns a `region_id`. |
 | `recolor_region(region_id, color_index)` | Recolor all voxels in a previously added shape. |
 | `erase_region(region_id)` | Clear all voxels in a previously added shape. |

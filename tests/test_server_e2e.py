@@ -21,6 +21,7 @@ ALL_TOOL_NAMES = {
     "import_vox",
     "set_voxel",
     "add_shape",
+    "carve_shape",
     "stamp_vox",
     "recolor_region",
     "erase_region",
@@ -226,4 +227,37 @@ async def test_stamp_vox_tool_over_real_session(tmp_path):
 
         result = await session.call_tool("inspect_model", {})
         assert "Voxel count: 2" in result.content[0].text
+
+
+@pytest.mark.anyio
+async def test_carve_shape_and_smart_recolor_over_real_session():
+    async with live_session() as session:
+        await session.call_tool("create_canvas", {"width": 10, "depth": 10, "height": 10})
+        # Add a 6x6x6 box (216 voxels)
+        result = await session.call_tool(
+            "add_shape",
+            {"shape": "box", "color_index": 10, "center_x": 5, "center_y": 5, "center_z": 5, "size_x": 6, "size_y": 6, "size_z": 6},
+        )
+        assert not result.is_error
+        assert "region_id=1" in result.content[0].text
+
+        # Carve a 2x2x6 hole through the middle (24 voxels)
+        result = await session.call_tool(
+            "carve_shape",
+            {"shape": "box", "center_x": 5, "center_y": 5, "center_z": 5, "size_x": 2, "size_y": 2, "size_z": 6},
+        )
+        assert not result.is_error
+        assert "Carved 24 voxels" in result.content[0].text
+
+        # Model should now have 216 - 24 = 192 voxels
+        result = await session.call_tool("inspect_model", {})
+        assert "Voxel count: 192" in result.content[0].text
+
+        # Recoloring region 1 should only recolor the 192 remaining voxels without filling in the hole
+        result = await session.call_tool("recolor_region", {"region_id": 1, "color_index": 20})
+        assert not result.is_error
+        assert "Recolored 192 voxels" in result.content[0].text
+
+        result = await session.call_tool("inspect_model", {})
+        assert "Voxel count: 192" in result.content[0].text
 

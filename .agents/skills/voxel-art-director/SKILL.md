@@ -1,4 +1,4 @@
-﻿---
+---
 name: voxel-art-director
 description: End-to-end framework and best practices for creating complex 3D voxel art, modular scenes, dioramas, and MagicaVoxel models using single-agent and multi-subagent prefab workflows with MagicaVoxel MCP.
 ---
@@ -129,13 +129,27 @@ write_vox(master, "master_scene.vox")
 For single models, follow the 4-phase sequential pipeline:
 
 * **Phase 1 (Foundation & Silhouette)**: Block out main volume. Call `render(views=["hero", "top", "front"])`.
-* **Phase 2 (Architectural Features)**: Cutouts, overhangs, secondary forms. Save `save_checkpoint("phase_2")`.
+* **Phase 2 (Architectural Features & CSG Carving)**: Cutouts, overhangs, secondary forms. Save `save_checkpoint("phase_2")`.
 * **Phase 3 (Detailing & Accents)**: Micro-voxels, bevels, trims. Log all `region_id`s.
 * **Phase 4 (Palette Polish)**: Final `apply_palette` adjustments.
 
 ---
 
-## 👁️ 8. Two-Tier Visual Quality Gate
+## 🪓 8. Constructive Solid Geometry (CSG) & Subtractive Sculpting
+
+Do NOT try to build complex hollow shapes out of hundreds of individual thin boxes. Instead, use **Subtractive Sculpting** (`add_shape` $\to$ `carve_shape`):
+
+| Target Feature | Method | Tool Calls |
+| :--- | :--- | :--- |
+| **Arched Doorway / Gate** | Solid Wall + Horizontal Cylinder Carve | `add_shape(shape="box", ...)` $\to$ `carve_shape(shape="cylinder", axis="y", ...)` |
+| **Window Cutout** | Solid Wall + Box Carve | `add_shape(shape="box", ...)` $\to$ `carve_shape(shape="box", ...)` |
+| **Hollow Pot / Bowl / Mug** | Solid Cylinder + Inner Cylinder Carve | `add_shape(shape="cylinder", radius=6, ...)` $\to$ `carve_shape(shape="cylinder", radius=4, ...)` |
+| **Roof Slope / Chamfer** | Solid Block + Angled Cylinder/Sphere Carve | `add_shape(shape="box", ...)` $\to$ `carve_shape(shape="cylinder", ...)` along eaves |
+| **Hollow Room / Cave Interior**| Solid Cube + Inner Box/Sphere Carve | `add_shape(shape="box", size_x=24, ...)` $\to$ `carve_shape(shape="box", size_x=20, ...)` |
+
+---
+
+## 👁️ 9. Two-Tier Visual Quality Gate
 
 1. **Tier 1 (Subagent Local Check)**: Each child subagent inspects close-up renders (`render(views=["hero"], engine="cycles")`).
 2. **Tier 2 (Orchestrator Global Check)**:

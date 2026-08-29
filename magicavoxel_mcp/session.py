@@ -77,9 +77,12 @@ class Session:
         if not (1 <= color_index <= 255):
             raise ValueError(f"color_index must be between 1 and 255, got {color_index}")
         xs, ys, zs = region.coords
-        buffer.grid[xs, ys, zs] = color_index
+        current = buffer.grid[xs, ys, zs]
+        active_mask = current != 0
+        if np.any(active_mask):
+            buffer.grid[xs[active_mask], ys[active_mask], zs[active_mask]] = color_index
         self.regions[region_id] = replace(region, color_index=color_index)
-        return region.voxel_count
+        return int(np.count_nonzero(active_mask))
 
     def erase_region(self, region_id: int) -> int:
         buffer = self.require_buffer()

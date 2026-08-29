@@ -9,6 +9,7 @@ import tempfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import numpy as np
 from mcp.server import MCPServer
 from mcp.server.mcpserver import Context, Image
 
@@ -150,6 +151,54 @@ def add_shape(
         clipped = requested_count - count
         message += f" {clipped} of {requested_count} requested voxels fell outside the canvas bounds and were not painted."
     return message
+
+
+@server.tool()
+def carve_shape(
+    ctx: Context,
+    shape: str,
+    center_x: int = 0,
+    center_y: int = 0,
+    center_z: int = 0,
+    size_x: int = 1,
+    size_y: int = 1,
+    size_z: int = 1,
+    radius: float = 1.0,
+    height: float = 1.0,
+    axis: str = "z",
+) -> str:
+    """Carve/subtract a 3D geometric volume out of the existing canvas (sets
+    voxels to empty 0). Ideal for carving arches, doorways, windows, hollow
+    interiors (rooms, pots, bowls), and organic sculpted cuts.
+
+    Coordinate convention: x = width (left/right), y = depth (into screen),
+    z = height (up).
+    shape: "box", "sphere", or "cylinder".
+    """
+    session = _session(ctx)
+    buffer = session.require_buffer()
+    center = (center_x, center_y, center_z)
+
+    grid_before = buffer.grid.copy()
+
+    if shape == "box":
+        min_corner = (center_x - size_x // 2, center_y - size_y // 2, center_z - size_z // 2)
+        max_corner = (min_corner[0] + size_x - 1, min_corner[1] + size_y - 1, min_corner[2] + size_z - 1)
+        count, coords, requested_count = fill_box(buffer, min_corner, max_corner, 0)
+    elif shape == "sphere":
+        count, coords, requested_count = fill_sphere(buffer, center, radius, 0)
+    elif shape == "cylinder":
+        count, coords, requested_count = fill_cylinder(buffer, center, radius, height, axis, 0)
+    else:
+        raise ValueError(f"Unknown shape {shape!r}: expected 'box', 'sphere', or 'cylinder'")
+
+    xs, ys, zs = coords
+    if len(xs) > 0:
+        actually_carved = int(np.count_nonzero(grid_before[xs, ys, zs]))
+    else:
+        actually_carved = 0
+
+    return f"Carved {actually_carved} voxels for {shape} (cleared {count} total canvas positions)."
 
 
 @server.tool()

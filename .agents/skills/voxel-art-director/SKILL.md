@@ -34,9 +34,24 @@ Choose the workflow mode based on scene complexity:
 
 ---
 
-## 📋 3. Mandatory Step 0: User-Facing Blueprint Presentation
+## 🔍 3. Mandatory Step 0: Reference & Requirement Deconstruction
 
-**BEFORE modifying voxels or spawning child subagents**, the Orchestrator MUST present the structured scene blueprint to the user:
+**BEFORE writing any code, blueprints, or spawning subagents**, the Orchestrator MUST conduct an explicit visual/textual requirement deconstruction:
+
+1. **Feature & Geometry Matrix**:
+   * Break down every entity into its fundamental 3D primitives (e.g. *Tree = vertical cylinder trunk + 3 stacked horizontal cylinder plates*).
+2. **Proportions & Focal Hierarchy**:
+   * Identify the primary focal anchor (e.g. *Character on bench = 30% of foreground height*) and record relative scale ratios.
+3. **Palette & Material Sampling**:
+   * Explicitly list all RGB/HEX color tones and identify any emissive elements (lanterns, neons).
+4. **Occlusion & Spatial Alignment**:
+   * Map which objects sit in front, behind, or cast shadows on adjacent surfaces.
+
+---
+
+## 📋 4. Mandatory Step 1: User-Facing Blueprint Presentation
+
+**AFTER deconstruction and BEFORE modifying voxels**, present the structured scene blueprint:
 
 ```markdown
 ### 🗺️ Master Scene Specification: [Scene Title]

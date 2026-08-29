@@ -117,6 +117,18 @@ for mat in bpy.data.materials:
             bsdf.inputs["Base Color"].default_value = (lin_r, lin_g, lin_b, base_col[3])
             bsdf.inputs["Roughness"].default_value = 0.45
 
+            # Detect glowing accent colors (warm lanterns, neon accents)
+            is_warm_glow = (lin_r > 0.75 and lin_g > 0.65 and lin_b < 0.65)
+            is_neon_glow = (lin_g > 0.8 and lin_b > 0.8 and lin_r < 0.4)
+            if is_warm_glow or is_neon_glow:
+                try:
+                    if "Emission Color" in bsdf.inputs:
+                        bsdf.inputs["Emission Color"].default_value = (lin_r, lin_g, lin_b, 1.0)
+                    if "Emission Strength" in bsdf.inputs:
+                        bsdf.inputs["Emission Strength"].default_value = 6.0
+                except Exception:
+                    pass
+
 corners = [model.matrix_world @ mathutils.Vector(c) for c in model.bound_box]
 min_corner = mathutils.Vector((min(c[i] for c in corners) for i in range(3)))
 max_corner = mathutils.Vector((max(c[i] for c in corners) for i in range(3)))

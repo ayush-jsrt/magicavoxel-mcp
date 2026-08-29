@@ -27,7 +27,10 @@ Choose the workflow mode based on scene complexity:
 | Scenario | Mode | Architecture |
 | :--- | :--- | :--- |
 | Single asset or model $\le 32 \times 32 \times 32$ (e.g. sword, chair, character, small tree) | **Mode A: Single-Agent Phased Sculpting** | Built sequentially in one canvas using phased blockout, region handles, and micro-renders. |
-| Complex scene $> 32^3$ with $2+$ distinct objects (e.g. ramen shop, street corner, diorama, room) | **Mode B: Modular Subagenting & Level Assembly** | Orchestrator assigns local bounding boxes $\to$ Subagents sculpt prefabs $\to$ Python compositor stamps into master scene. |
+| Complex scene $> 32^3$ with $2+$ distinct objects (e.g. ramen shop, street corner, diorama, room) | **Mode B: Modular Subagenting & Level Assembly** | **MANDATORY**: Bounding boxes allocated $\to$ Subagents sculpt prefabs $\to$ Verified via local renders $\to$ Stamped with `stamp_vox`. |
+
+> [!WARNING]
+> **Anti-Monolith Enforcement**: Never attempt to build multi-object scenes ($>32^3$) in a single monolithic Python script or one-shot prompt. Monolithic generation causes proportion collapse, blobby foliage, and missed focal details. Always decompose into modular subagent prefabs.
 
 ---
 

@@ -152,19 +152,18 @@ Do NOT try to build complex hollow shapes out of hundreds of individual thin box
 
 ---
 
-## 👁️ 9. Two-Tier Visual Quality Gate
+## 👁️ 9. Mandatory Visual Feedback Loop (Render After Every Change)
 
-1. **Tier 1 (Subagent Local Check)**: Each child subagent inspects close-up renders (`render(views=["hero"], engine="cycles")`).
-2. **Tier 2 (Orchestrator Global Check)**:
-   * Render multi-angle contact sheet of the master scene:
-     `render(views=["hero", "hero_front_left", "front"], lighting="neutral", engine="cycles")`
-   * Open the final scene directly in the MagicaVoxel desktop GUI:
-     `open_in_magicavoxel("master_scene.vox")`
+> [!IMPORTANT]
+> **Look Before Proceeding**: Never sculpt blindly in bulk. Agents (both Orchestrator and Child Subagents) MUST invoke `render(views=["hero"])` after almost every meaningful change (blocking base $\to$ render, carving cutouts $\to$ render, detailing $\to$ render). 
+> 
+> * **Why**: 3D spatial drift occurs quickly without visual confirmation. Viewing the rendered image allows the agent to immediately spot misalignments, wrong proportions, and occlusion issues before stacking more voxels on top.
+> * **Rule of Thumb**: Maximum 1–2 shape/carve operations between visual checks.
 
 ---
 
 ## 🛡️ Anti-Amnesia Protocol (Preserving Spatial Context)
 To prevent image token pruning from causing spatial mistakes:
 1. Always maintain the **Text Spatial Ledger** in your notes (never rely purely on visual memory from 5 steps ago).
-2. Take micro-renders every 2–3 shape additions.
+2. Take micro-renders after almost every edit to refresh the active visual context.
 3. Save checkpoints before risky structural edits.

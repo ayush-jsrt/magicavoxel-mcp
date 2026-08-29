@@ -68,11 +68,17 @@ Break down the scene into **4–6 ordered milestones**, starting from the founda
 > * An agent **MUST NEVER execute more than one milestone in a single response**.
 > * The user MUST be given the opportunity to review, critique, suggest enhancements, or modify the scene after each milestone completion.
 
-### Standard Turn Lifecycle for Each Milestone:
-1. **Execute Milestone Geometry**: Use `add_shape`, `carve_shape`, `set_voxel`, or local modular stamping for the current milestone.
-2. **Render Hero View**: Call `render(views=["hero"], engine="cycles")` to generate an up-to-date visual.
-3. **Save Checkpoint**: Call `save_checkpoint(f"milestone_{N}")`.
-4. **Present & Stop**: Present the rendered image, summarize what was built in this milestone, and **STOP to ask the user for feedback before proceeding to the next milestone**.
+### Mandatory Milestone Lifecycle & Self-Correction Diff Loop:
+1. **Execute Milestone Geometry**: Add, carve, or stamp geometry for the current milestone.
+2. **Render Visual Output**: Call `render(views=["hero"], engine="cycles")`.
+3. **Reference Image Visual Diff (CRITICAL)**:
+   * When a reference image is provided, **re-inspect the reference image using `view_file`** and perform a side-by-side visual comparison against the render.
+   * Check silhouettes, proportions, alignments, and edge cuts for the current milestone.
+4. **Self-Correction Convergence Loop**:
+   * If discrepancies or missing details are found: **DO NOT STOP**. Refine the geometry, re-render, and re-compare. Repeat until 100% satisfied that the milestone matches the reference requirements.
+5. **Save Checkpoint & Present**:
+   * Call `save_checkpoint(f"milestone_{N}")`.
+   * Present the render and comparison summary, then **STOP to ask the user for feedback before proceeding to the next milestone**.
 
 ---
 

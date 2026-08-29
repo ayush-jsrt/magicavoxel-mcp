@@ -19,6 +19,8 @@ VALID_VIEWS = (
 # Keep in sync with LIGHTING_PRESETS in blender_scripts/render_views.py.
 VALID_LIGHTING = ("neutral", "night")
 
+VALID_ENGINES = ("cycles", "eevee")
+
 
 def resolve_blender_exe(blender_exe: str | None = None) -> str:
     if blender_exe:
@@ -41,14 +43,17 @@ def render_views(
     views: list[str],
     image_size: int = 512,
     lighting: str = "neutral",
+    engine: str = "cycles",
     blender_exe: str | None = None,
-    timeout: float = 90,
+    timeout: float = 120,
 ) -> dict[str, str]:
     for view in views:
         if view not in VALID_VIEWS:
             raise ValueError(f"Unknown view {view!r}: expected one of {VALID_VIEWS}")
     if lighting not in VALID_LIGHTING:
         raise ValueError(f"Unknown lighting {lighting!r}: expected one of {VALID_LIGHTING}")
+    if engine not in VALID_ENGINES:
+        raise ValueError(f"Unknown engine {engine!r}: expected one of {VALID_ENGINES}")
 
     exe = resolve_blender_exe(blender_exe)
     os.makedirs(output_dir, exist_ok=True)
@@ -65,6 +70,7 @@ def render_views(
         ",".join(views),
         str(image_size),
         lighting,
+        engine,
     ]
     result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:

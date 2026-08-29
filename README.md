@@ -143,7 +143,8 @@ tall things by growing z, not y.
 | `apply_palette(entries)` | Set palette colors: `[index, r, g, b]` or `[index, r, g, b, a]`. |
 | `save_checkpoint(name)` / `restore_checkpoint(name)` | Snapshot and roll back the canvas. |
 | `export_vox(path)` | Write the canvas to a `.vox` file. |
-| `render(views, image_size)` | Render `"front"/"back"/"left"/"right"/"top"` views (default: front, right, top) as one contact-sheet image. |
+| `open_in_magicavoxel(vox_path)` | Open the active canvas (or a .vox file) in the installed desktop MagicaVoxel application. |
+| `render(views, image_size, lighting, engine)` | Render views as one contact-sheet image using `"cycles"` (MagicaVoxel path-traced aesthetic) or `"eevee"` (fast preview). |
 | `inspect_model()` | Text summary: dimensions, voxel count, bounding box. |
 
 Regions are paint-time snapshots — if a later shape overlaps and repaints
@@ -168,7 +169,6 @@ limitations.
 
 ## Not yet implemented
 
-- `open_in_magicavoxel` convenience tool (launching the real app on a file)
 - Mirror/rotate/array operations, true CSG boolean subtract
 - MagicaVoxel scene-graph chunks (`nTRN`/`nGRP`/`nSHP`) — only single-model files are supported
 - A sandboxed `run_voxel_script` tool for agent-authored procedural generation

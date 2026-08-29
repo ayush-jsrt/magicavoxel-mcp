@@ -33,3 +33,5 @@ Thumbs.db
 
 # Machine-specific MCP client config (paths differ per install) — see .mcp.json.example
 .mcp.json
+mcp_config.json
+.agents/mcp_config.json

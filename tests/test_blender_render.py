@@ -73,3 +73,28 @@ def test_render_views_rejects_unknown_lighting(tmp_path):
 
     with pytest.raises(ValueError):
         render_views(obj_path, os.fspath(tmp_path / "out"), ["hero"], lighting="sunset")
+
+
+def test_render_views_eevee_engine(tmp_path):
+    buf = VoxelBuffer(4, 4, 4)
+    fill_box(buf, (1, 1, 1), (2, 2, 2), 5)
+    obj_path = os.fspath(tmp_path / "model.obj")
+    write_cube_mesh(buf, obj_path)
+
+    output_dir = os.fspath(tmp_path / "renders_eevee")
+    result = render_views(obj_path, output_dir, ["hero"], image_size=128, engine="eevee")
+
+    path = result["hero"]
+    assert os.path.exists(path)
+    assert not _is_blank(path), f"{path} looks blank"
+
+
+def test_render_views_rejects_unknown_engine(tmp_path):
+    buf = VoxelBuffer(3, 3, 3)
+    buf.set_voxel(1, 1, 1, 1)
+    obj_path = os.fspath(tmp_path / "model.obj")
+    write_cube_mesh(buf, obj_path)
+
+    with pytest.raises(ValueError):
+        render_views(obj_path, os.fspath(tmp_path / "out"), ["hero"], engine="unsupported_engine")
+

@@ -30,6 +30,7 @@ ALL_TOOL_NAMES = {
     "export_vox",
     "inspect_model",
     "render",
+    "open_in_magicavoxel",
 }
 
 
@@ -184,3 +185,25 @@ async def test_render_tool_accepts_explicit_multi_view_over_real_session():
         image_block = result.content[0]
         assert image_block.type == "image"
         assert len(image_block.data) > 0
+
+
+@pytest.mark.anyio
+async def test_open_in_magicavoxel_over_real_session(monkeypatch, tmp_path):
+    from unittest.mock import MagicMock
+    import magicavoxel_mcp.server as srv_module
+
+    fake_exe = os.fspath(tmp_path / "MagicaVoxel.exe")
+    with open(fake_exe, "w") as f:
+        f.write("")
+
+    monkeypatch.setattr(srv_module, "resolve_magicavoxel_exe", lambda *args, **kwargs: fake_exe)
+    mock_popen = MagicMock()
+    monkeypatch.setattr(srv_module.subprocess, "Popen", mock_popen)
+
+    async with live_session() as session:
+        await session.call_tool("create_canvas", {"width": 4, "depth": 4, "height": 4})
+        result = await session.call_tool("open_in_magicavoxel", {})
+        assert not result.is_error
+        assert "Opened" in result.content[0].text
+        assert mock_popen.called
+

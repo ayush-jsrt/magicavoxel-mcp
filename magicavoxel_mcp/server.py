@@ -2,6 +2,9 @@
 VoxelBuffer, region handles, checkpoints) per server process (Milestone 1/2
 scope: single session)."""
 
+import os
+import shutil
+import subprocess
 import tempfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -15,6 +18,28 @@ from magicavoxel_mcp.geometry import fill_box, fill_cylinder, fill_sphere
 from magicavoxel_mcp.mesh_export import write_cube_mesh
 from magicavoxel_mcp.session import Session
 from magicavoxel_mcp.vox_io import read_vox, write_vox
+
+
+def resolve_magicavoxel_exe(custom_path: str | None = None) -> str:
+    if custom_path:
+        return custom_path
+    env_path = os.environ.get("MAGICAVOXEL_EXE") or os.environ.get("MAGICAVOXEL_MCP_APP_EXE")
+    if env_path and os.path.exists(env_path):
+        return env_path
+    candidates = [
+        r"C:\Users\ayush\Desktop\MagicaVoxel\MagicaVoxel-0.99.7.2-win64\MagicaVoxel.exe",
+        os.path.expanduser(r"~\Desktop\MagicaVoxel\MagicaVoxel-0.99.7.2-win64\MagicaVoxel.exe"),
+        r"C:\Program Files\MagicaVoxel\MagicaVoxel.exe",
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    which_path = shutil.which("MagicaVoxel") or shutil.which("magicavoxel")
+    if which_path:
+        return which_path
+    raise RuntimeError(
+        "Could not find MagicaVoxel.exe. Set MAGICAVOXEL_EXE environment variable or install it."
+    )
 
 
 @asynccontextmanager
@@ -197,7 +222,13 @@ def export_vox(ctx: Context, path: str) -> str:
 
 
 @server.tool()
-def render(ctx: Context, views: list[str] | None = None, image_size: int = 512, lighting: str = "neutral") -> Image:
+def render(
+    ctx: Context,
+    views: list[str] | None = None,
+    image_size: int = 512,
+    lighting: str = "neutral",
+    engine: str = "cycles",
+) -> Image:
     """Render the current canvas and return an image so you can visually
     check the model. By default, renders a single "hero" perspective 3/4
     angle — the most useful one for judging how something actually looks.
@@ -217,6 +248,10 @@ def render(ctx: Context, views: list[str] | None = None, image_size: int = 512, 
     fill — for moody night scenes). This is a global mood approximation, not
     real light sources tied to lanterns/neon/etc. in the model.
 
+    engine: "cycles" (default, path-traced MagicaVoxel aesthetic with soft
+    shadows, ambient ground catcher, and voxel edge bevels) or "eevee"
+    (ultra-fast rasterized preview).
+
     The camera always auto-fits the entire scene's bounding box — there is
     no occlusion check, so any shape sitting between the camera and the rest
     of the model (e.g. a wall placed on the camera-facing side rather than
@@ -235,7 +270,14 @@ def render(ctx: Context, views: list[str] | None = None, image_size: int = 512, 
     with tempfile.TemporaryDirectory() as tmp_dir:
         obj_path = f"{tmp_dir}/model.obj"
         write_cube_mesh(buffer, obj_path)
-        view_paths = render_views(obj_path, tmp_dir, views, image_size=image_size, lighting=lighting)
+        view_paths = render_views(
+            obj_path,
+            tmp_dir,
+            views,
+            image_size=image_size,
+            lighting=lighting,
+            engine=engine,
+        )
 
         if len(view_paths) == 1:
             (output_path,) = view_paths.values()
@@ -246,6 +288,31 @@ def render(ctx: Context, views: list[str] | None = None, image_size: int = 512, 
         with open(output_path, "rb") as f:
             sheet_bytes = f.read()
     return Image(data=sheet_bytes, format="png")
+
+
+@server.tool()
+def open_in_magicavoxel(ctx: Context, vox_path: str | None = None) -> str:
+    """Open the current canvas (or an existing .vox file) in the installed
+    desktop MagicaVoxel application for native interaction and GPU path-traced rendering.
+    """
+    exe = resolve_magicavoxel_exe()
+    app_dir = os.path.dirname(exe)
+
+    if vox_path is None:
+        buffer = _session(ctx).require_buffer()
+        vox_dir = os.path.join(app_dir, "vox")
+        if os.path.isdir(vox_dir):
+            target_path = os.path.join(vox_dir, "mcp_model.vox")
+        else:
+            target_path = os.path.abspath("mcp_model.vox")
+        write_vox(buffer, target_path)
+    else:
+        target_path = os.path.abspath(vox_path)
+        if not os.path.exists(target_path):
+            raise ValueError(f"File {target_path} does not exist")
+
+    subprocess.Popen([exe, target_path], cwd=app_dir)
+    return f"Opened {target_path} in MagicaVoxel ({exe})."
 
 
 @server.tool()

@@ -161,7 +161,6 @@ to fix properly).
       which doesn't exist in the installed `mcp==2.0.0`) wrapping the core library.
 - [x] Blender headless render script (mesh-from-cubes importer, camera/light setup).
 - [x] Region handles + checkpoint/restore (`session.py`).
-- [x] `import_vox` tool.
+- [x] `open_in_magicavoxel` convenience tool.
 - [ ] Sandbox design for `run_voxel_script`.
-- [ ] `open_in_magicavoxel` convenience tool.
 - [ ] Mirror/rotate/array ops, true CSG boolean subtract, MagicaVoxel scene-graph chunks (`nTRN`/`nGRP`/`nSHP`) — all explicitly deferred past Milestone 2.

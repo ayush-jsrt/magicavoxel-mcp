@@ -15,29 +15,43 @@ import bpy
 import mathutils
 
 argv = sys.argv[sys.argv.index("--") + 1:]
-mesh_obj_path, output_dir, views_csv, image_size, lighting = argv
+mesh_obj_path, output_dir, views_csv, image_size, lighting = argv[:5]
+engine = argv[5].lower() if len(argv) > 5 else "cycles"
+
 views = views_csv.split(",")
 image_size = int(image_size)
 
+def srgb_to_linear(c: float) -> float:
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
 LIGHTING_PRESETS = {
-    # Flat, neutral studio lighting — predictable, good for verifying shape
-    # and color rather than mood. Energies are kept low enough that a light
-    # pastel material doesn't overexpose toward white (verified against a
-    # (220, 190, 230) test material rendering close to its literal RGB).
+    # MagicaVoxel-matching studio lighting: dark slate ambient backdrop
+    # and pure white directional sun for vibrant, saturated voxel colors.
     "neutral": {
-        "world_color": (0.5, 0.5, 0.5),
-        "key_energy": 1.0, "key_color": (1.0, 1.0, 1.0), "key_rotation": (0.6, 0.2, 0.4),
-        "fill_energy": 0.4, "fill_color": (1.0, 1.0, 1.0), "fill_rotation": (-0.5, -0.3, 2.6),
+        "world_color": (0.22, 0.24, 0.27),
+        "world_strength": 0.5,
+        "key_energy": 3.5,
+        "key_color": (1.0, 1.0, 1.0),
+        "key_rotation": (0.75, 0.25, 0.8),
+        "key_angle": 0.06,
+        "fill_energy": 0.6,
+        "fill_color": (0.95, 0.95, 1.0),
+        "fill_rotation": (-0.5, -0.3, 2.6),
     },
     # Dark ambient + warm low key light (simulating lantern/street-level
     # warmth) + cool blue rim fill from behind for contrast — for moody
-    # night scenes. We have no true per-object emission/point lights yet
-    # (see docs/ARCHITECTURE.md), so this is a global mood approximation,
-    # not actual light sources tied to lanterns/neon in the model.
+    # night scenes.
     "night": {
         "world_color": (0.015, 0.015, 0.035),
-        "key_energy": 1.6, "key_color": (1.0, 0.55, 0.25), "key_rotation": (1.3, 0.1, 0.5),
-        "fill_energy": 0.7, "fill_color": (0.4, 0.55, 1.0), "fill_rotation": (-0.6, -0.2, 2.9),
+        "world_strength": 0.4,
+        "key_energy": 2.5,
+        "key_color": (1.0, 0.55, 0.25),
+        "key_rotation": (1.3, 0.1, 0.5),
+        "key_angle": 0.08,
+        "fill_energy": 0.8,
+        "fill_color": (0.4, 0.55, 1.0),
+        "fill_rotation": (-0.6, -0.2, 2.9),
     },
 }
 if lighting not in LIGHTING_PRESETS:
@@ -91,6 +105,18 @@ bpy.ops.mesh.select_all(action="SELECT")
 bpy.ops.mesh.normals_make_consistent(inside=False)
 bpy.ops.object.mode_set(mode="OBJECT")
 
+# Convert imported material colors from sRGB to Linear space for true saturation
+for mat in bpy.data.materials:
+    if mat.use_nodes:
+        bsdf = mat.node_tree.nodes.get("Principled BSDF")
+        if bsdf:
+            base_col = list(bsdf.inputs["Base Color"].default_value)
+            lin_r = srgb_to_linear(base_col[0])
+            lin_g = srgb_to_linear(base_col[1])
+            lin_b = srgb_to_linear(base_col[2])
+            bsdf.inputs["Base Color"].default_value = (lin_r, lin_g, lin_b, base_col[3])
+            bsdf.inputs["Roughness"].default_value = 0.45
+
 corners = [model.matrix_world @ mathutils.Vector(c) for c in model.bound_box]
 min_corner = mathutils.Vector((min(c[i] for c in corners) for i in range(3)))
 max_corner = mathutils.Vector((max(c[i] for c in corners) for i in range(3)))
@@ -100,31 +126,67 @@ distance = extent * 3 + 5
 ortho_scale = extent * 1.3 + 1
 
 scene = bpy.context.scene
-scene.render.engine = "BLENDER_EEVEE_NEXT"
 scene.render.resolution_x = image_size
 scene.render.resolution_y = image_size
 scene.render.film_transparent = False
-scene.eevee.taa_render_samples = 64
-scene.eevee.use_gtao = True
-scene.eevee.gtao_factor = 1.0
-scene.eevee.gtao_distance = max(extent * 0.15, 0.5)
-if scene.world is None:
-    scene.world = bpy.data.worlds.new("World")
-scene.world.use_nodes = False
-scene.world.color = preset["world_color"]
-# Blender 4.x defaults to the AgX view transform, which tone-maps/desaturates
-# bright and pastel colors — fighting the "best for judging shape/color"
-# goal of these presets. Use Standard so rendered colors track the literal
-# palette RGB.
 scene.view_settings.view_transform = "Standard"
 
+if engine == "cycles":
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = 32
+    scene.cycles.use_denoising = True
+    scene.cycles.denoiser = "OPENIMAGEDENOISE"
+
+    # Add ground shadow catcher (like MagicaVoxel's ground plane)
+    bpy.ops.mesh.primitive_plane_add(size=extent * 10 + 20, location=(center.x, center.y, min_corner.z))
+    ground = bpy.context.active_object
+    ground.is_shadow_catcher = True
+
+    # Material micro-bevels for MagicaVoxel voxel edge definition
+    for mat in bpy.data.materials:
+        if mat.use_nodes:
+            bsdf = mat.node_tree.nodes.get("Principled BSDF")
+            if bsdf:
+                try:
+                    bevel = mat.node_tree.nodes.new("ShaderNodeBevel")
+                    bevel.inputs["Radius"].default_value = 0.04
+                    bevel.samples = 4
+                    mat.node_tree.links.new(bevel.outputs["Normal"], bsdf.inputs["Normal"])
+                except Exception:
+                    pass
+
+    if scene.world is None:
+        scene.world = bpy.data.worlds.new("World")
+    scene.world.use_nodes = True
+    bg = scene.world.node_tree.nodes.get("Background")
+    if bg:
+        bg.inputs["Color"].default_value = (*preset["world_color"], 1.0)
+        bg.inputs["Strength"].default_value = preset.get("world_strength", 0.5)
+
+else:
+    scene.render.engine = "BLENDER_EEVEE_NEXT"
+    scene.eevee.taa_render_samples = 64
+    scene.eevee.use_gtao = True
+    scene.eevee.gtao_factor = 1.0
+    scene.eevee.gtao_distance = max(extent * 0.15, 0.5)
+
+    if scene.world is None:
+        scene.world = bpy.data.worlds.new("World")
+    scene.world.use_nodes = False
+    scene.world.color = preset["world_color"]
+
+# Key Sun
 sun_data = bpy.data.lights.new(name="Sun", type="SUN")
 sun_data.energy = preset["key_energy"]
 sun_data.color = preset["key_color"]
+if hasattr(sun_data, "angle"):
+    sun_data.angle = preset.get("key_angle", 0.08)
 sun_obj = bpy.data.objects.new("Sun", sun_data)
 sun_obj.rotation_euler = preset["key_rotation"]
 bpy.context.collection.objects.link(sun_obj)
 
+# Fill Light
 fill_data = bpy.data.lights.new(name="Fill", type="SUN")
 fill_data.energy = preset["fill_energy"]
 fill_data.color = preset["fill_color"]
@@ -132,6 +194,7 @@ fill_obj = bpy.data.objects.new("Fill", fill_data)
 fill_obj.rotation_euler = preset["fill_rotation"]
 bpy.context.collection.objects.link(fill_obj)
 
+# Camera
 camera_data = bpy.data.cameras.new("Camera")
 camera_obj = bpy.data.objects.new("Camera", camera_data)
 bpy.context.collection.objects.link(camera_obj)
@@ -144,7 +207,7 @@ for view in views:
 
     if view in PERSPECTIVE_VIEWS:
         camera_data.type = "PERSP"
-        camera_data.lens = 40
+        camera_data.lens = 45
         cam_distance = extent * 2.2 + 4
     else:
         camera_data.type = "ORTHO"

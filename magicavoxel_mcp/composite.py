@@ -12,12 +12,12 @@ def paste_vox_buffer(
     offset_z: int,
     rotation: int = 0,
     auto_crop: bool = True,
-) -> tuple[int, tuple[int, int, int]]:
+) -> tuple[int, tuple[np.ndarray, np.ndarray, np.ndarray], tuple[int, int, int]]:
     """Pastes a prop VoxelBuffer into a master VoxelBuffer at (offset_x, offset_y, offset_z).
 
     rotation: 0, 90, 180, or 270 degrees clockwise around Z axis.
     auto_crop: If True, crops empty outer bounds before placing so the prop base sits flush.
-    Returns: (voxels_painted, target_bounding_size)
+    Returns: (voxels_painted, coords, target_bounding_size)
     """
     grid = prop.grid.copy()
 
@@ -57,11 +57,15 @@ def paste_vox_buffer(
     dst_z1 = dst_z0 + (src_z1 - src_z0)
 
     if src_x1 <= src_x0 or src_y1 <= src_y0 or src_z1 <= src_z0:
-        return 0, (pw, pd, ph)
+        empty = np.array([], dtype=np.intp)
+        return 0, (empty, empty, empty), (pw, pd, ph)
 
     src_sub = grid[src_x0:src_x1, src_y0:src_y1, src_z0:src_z1]
     dst_sub = master.grid[dst_x0:dst_x1, dst_y0:dst_y1, dst_z0:dst_z1]
 
     mask = src_sub != 0
     dst_sub[mask] = src_sub[mask]
-    return int(np.count_nonzero(mask)), (pw, pd, ph)
+
+    local_xs, local_ys, local_zs = np.nonzero(mask)
+    coords = (local_xs + dst_x0, local_ys + dst_y0, local_zs + dst_z0)
+    return int(np.count_nonzero(mask)), coords, (pw, pd, ph)

@@ -13,6 +13,7 @@ from mcp.server import MCPServer
 from mcp.server.mcpserver import Context, Image
 
 from magicavoxel_mcp.blender_render import render_views
+from magicavoxel_mcp.composite import paste_vox_buffer
 from magicavoxel_mcp.contact_sheet import compose_contact_sheet
 from magicavoxel_mcp.geometry import fill_box, fill_cylinder, fill_sphere
 from magicavoxel_mcp.mesh_export import write_cube_mesh
@@ -149,6 +150,44 @@ def add_shape(
         clipped = requested_count - count
         message += f" {clipped} of {requested_count} requested voxels fell outside the canvas bounds and were not painted."
     return message
+
+
+@server.tool()
+def stamp_vox(
+    ctx: Context,
+    path: str,
+    offset_x: int = 0,
+    offset_y: int = 0,
+    offset_z: int = 0,
+    rotation: int = 0,
+) -> str:
+    """Stamp an external .vox model (e.g. crafted by a child subagent or loaded
+    from disk) into the active canvas at (offset_x, offset_y, offset_z).
+
+    rotation: 0, 90, 180, or 270 degrees clockwise around the vertical Z-axis.
+    Automatically aligns the base to the offset floor (auto_crop) and registers
+    a new region_id so the stamped asset can be recolored or erased later.
+    """
+    session = _session(ctx)
+    master_buffer = session.require_buffer()
+    prop_buffer = read_vox(path)
+
+    count, coords, target_size = paste_vox_buffer(
+        master_buffer,
+        prop_buffer,
+        offset_x=offset_x,
+        offset_y=offset_y,
+        offset_z=offset_z,
+        rotation=rotation,
+        auto_crop=True,
+    )
+
+    region_id = session.add_region(f"stamp:{os.path.basename(path)}", color_index=0, coords=coords)
+    return (
+        f"Stamped {count} voxels from {path} at ({offset_x}, {offset_y}, {offset_z}) "
+        f"[rot={rotation}°, size={target_size[0]}x{target_size[1]}x{target_size[2]}] "
+        f"(region_id={region_id})."
+    )
 
 
 @server.tool()

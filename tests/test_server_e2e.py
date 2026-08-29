@@ -21,6 +21,7 @@ ALL_TOOL_NAMES = {
     "import_vox",
     "set_voxel",
     "add_shape",
+    "stamp_vox",
     "recolor_region",
     "erase_region",
     "list_regions",
@@ -206,4 +207,23 @@ async def test_open_in_magicavoxel_over_real_session(monkeypatch, tmp_path):
         assert not result.is_error
         assert "Opened" in result.content[0].text
         assert mock_popen.called
+
+
+@pytest.mark.anyio
+async def test_stamp_vox_tool_over_real_session(tmp_path):
+    prop = VoxelBuffer(4, 4, 4)
+    prop.set_voxel(0, 0, 0, 88)
+    prop.set_voxel(1, 1, 1, 88)
+    prop_path = os.fspath(tmp_path / "prop.vox")
+    write_vox(prop, prop_path)
+
+    async with live_session() as session:
+        await session.call_tool("create_canvas", {"width": 12, "depth": 12, "height": 12})
+        result = await session.call_tool("stamp_vox", {"path": prop_path, "offset_x": 4, "offset_y": 4, "offset_z": 0})
+        assert not result.is_error
+        assert "Stamped 2 voxels" in result.content[0].text
+        assert "region_id=" in result.content[0].text
+
+        result = await session.call_tool("inspect_model", {})
+        assert "Voxel count: 2" in result.content[0].text
 

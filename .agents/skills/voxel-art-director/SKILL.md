@@ -5,6 +5,14 @@ description: End-to-end framework for creating 3D voxel art and MagicaVoxel dior
 
 # Voxel Art Director & Interactive Milestone Architecture
 
+## Core Philosophy: Declarative Scene-as-Code
+
+To avoid dirty voxel state accumulation and enable 100% non-destructive iteration, scenes should be authored using the **Declarative Scene-as-Code** engine (`magicavoxel_mcp.scene`):
+* **Modular Components**: Each prop (Foundation, Cottage, Oak Tree, Bench, Character) is modeled in an isolated `Component` with clear parameters.
+* **Deterministic Compilation**: Use `compile_scene(script_path, checkpoint_name)` to compile all components into the active session buffer and save milestone checkpoints in one atomic step.
+* **Seamless Tweaks**: Any user revision is solved by adjusting parameters in the declarative script and re-compiling cleanly without leaving surface holes or residual floating voxels.
+* **Native .vox Interop**: Existing `.vox` models can be imported seamlessly via `Scene.from_vox()` or `scene.add_vox()`.
+
 This skill equips agents with a production-grade 3D voxel art pipeline. It prevents spatial drift, visual amnesia, scaling mismatches, and over-generation by breaking scene construction into **interactive, step-by-step milestones with mandatory user review gates**.
 
 ---

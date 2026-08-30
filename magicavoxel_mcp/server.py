@@ -416,9 +416,92 @@ def inspect_model(ctx: Context) -> str:
     )
 
 
+from magicavoxel_mcp.scene import Scene, Component
+
+
+@server.tool()
+def compile_scene(
+    ctx: Context,
+    script_path: str,
+    checkpoint_name: str | None = None,
+) -> str:
+    """Execute a declarative Scene-as-Code Python script, compile its components
+    into the active session VoxelBuffer, and optionally save a milestone checkpoint.
+    """
+    abs_path = os.path.abspath(script_path)
+    if not os.path.exists(abs_path):
+        raise ValueError(f"Scene script '{abs_path}' does not exist.")
+
+    session = _session(ctx)
+
+    # Execution context with pre-imported engine classes
+    local_scope: dict = {
+        "Scene": Scene,
+        "Component": Component,
+    }
+    
+    with open(abs_path, "r", encoding="utf-8") as f:
+        code_str = f.read()
+
+    # Execute the declarative script
+    exec(code_str, local_scope)
+
+    # Locate the Scene object or VoxelBuffer in script globals
+    scene_obj: Scene | None = None
+    buffer_obj = None
+
+    if "scene" in local_scope and isinstance(local_scope["scene"], Scene):
+        scene_obj = local_scope["scene"]
+    elif "build_scene" in local_scope and callable(local_scope["build_scene"]):
+        res = local_scope["build_scene"]()
+        if isinstance(res, Scene):
+            scene_obj = res
+        elif hasattr(res, "grid") and hasattr(res, "palette"):
+            buffer_obj = res
+
+    if scene_obj is not None:
+        compiled_buf = scene_obj.compile()
+        session.buffer = compiled_buf
+        comp_count = len(scene_obj.components)
+        summary = (
+            f"Compiled Scene '{scene_obj.name}' ({compiled_buf.shape[0]}x{compiled_buf.shape[1]}x{compiled_buf.shape[2]}) "
+            f"with {comp_count} component(s) -> {compiled_buf.voxel_count()} total voxels."
+        )
+    elif buffer_obj is not None:
+        session.buffer = buffer_obj
+        summary = (
+            f"Compiled buffer ({buffer_obj.shape[0]}x{buffer_obj.shape[1]}x{buffer_obj.shape[2]}) "
+            f"-> {buffer_obj.voxel_count()} total voxels."
+        )
+    else:
+        # Check if any Scene instance was created in local_scope
+        for val in local_scope.values():
+            if isinstance(val, Scene):
+                scene_obj = val
+                break
+        if scene_obj is not None:
+            compiled_buf = scene_obj.compile()
+            session.buffer = compiled_buf
+            summary = (
+                f"Compiled Scene '{scene_obj.name}' ({compiled_buf.shape[0]}x{compiled_buf.shape[1]}x{compiled_buf.shape[2]}) "
+                f"with {len(scene_obj.components)} component(s) -> {compiled_buf.voxel_count()} total voxels."
+            )
+        else:
+            raise ValueError(
+                "Scene script must define a `scene = Scene(...)` instance or a `build_scene() -> Scene` function."
+            )
+
+    if checkpoint_name:
+        session.save_checkpoint(checkpoint_name)
+        summary += f" Saved checkpoint '{checkpoint_name}'."
+
+    return summary
+
+
 def main() -> None:
     server.run()
 
 
 if __name__ == "__main__":
     main()
+

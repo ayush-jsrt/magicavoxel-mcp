@@ -19,6 +19,7 @@ from magicavoxel_mcp.voxel_buffer import VoxelBuffer
 ALL_TOOL_NAMES = {
     "create_canvas",
     "import_vox",
+    "compile_scene",
     "set_voxel",
     "add_shape",
     "carve_shape",
